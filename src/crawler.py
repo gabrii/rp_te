@@ -1,8 +1,8 @@
-from typing import List
 import re
-import requests
-
+from typing import List, Dict
 from urllib.parse import quote_plus
+
+import requests
 
 quote = "&quot;"
 
@@ -14,19 +14,31 @@ class Crawler:
 
     def __init__(self, proxies: List[str] = None):
         self.proxies = proxies
-        self.links_compiled_exp = re.compile(links_exp)
 
-    def search(self, keywords: List[str], _type: str = "") -> List[str]:
-        if _type not in {"", "Repositories", "Issues", "Wikis"}:
-            raise ValueError("Unrecognized search type")
+        # Compile regex once on initialization
+        self.links_compiled_exp = re.compile(links_exp)
+        self.languages_compiled_exp = re.compile(languages_exp)
+
+    def search(self, keywords: List[str], _type: str = "") -> List[Dict]:
         url = self.construct_url(keywords, _type)
         source = self.get(url)
-        return self.extract_links(source)
+        links = self.extract_links(source)
+        return [{"url": url} for url in links]
 
-    def extra_search(self, keywords: List[str], _type: str = "") -> List[str]:
-        pass
+    def search_extra(self, keywords: List[str], _type: str = "") -> List[Dict]:
+        results = self.search(keywords, _type)
+        return [
+            {
+                **r,
+                "owner": r['url'].split('/')[-2]
+            } for r in results
+        ]
 
-    def construct_url(self, keywords: List[str], _type: str) -> str:
+    @staticmethod
+    def construct_url(keywords: List[str], _type: str) -> str:
+        """Returns the search URL. """
+        if _type not in {"", "Repositories", "Issues", "Wikis"}:
+            raise ValueError("Unrecognized search type")
         return "https://github.com/search?q={0}&type={1}".format(quote_plus(' '.join(keywords)),
                                                                  quote_plus(_type))
 
@@ -36,3 +48,12 @@ class Crawler:
 
     def extract_links(self, source: str) -> List[str]:
         return self.links_compiled_exp.findall(source)
+
+    def extract_language_info(self, source: str) -> Dict[str, float]:
+        languages = self.languages_compiled_exp.findall(source)
+        language_info = {}
+        for lang in languages:
+            name = ' '.join(lang.split()[:-1])
+            portion = float(lang.split()[-1])
+            language_info[name] = portion
+        return language_info

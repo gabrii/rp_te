@@ -1,7 +1,8 @@
+import json
+import random
 import re
 from typing import List, Dict
 from urllib.parse import quote_plus
-import random
 
 import requests
 
@@ -43,10 +44,12 @@ class Crawler:
         return [
             {
                 **r,
-                "owner": r['url'].split('/')[-2],
-                "language_stats": self.extract_language_info(
-                    self.get(r['url'])
-                ),
+                "extra": {
+                    "owner": r['url'].split('/')[-2],
+                    "language_stats": self.extract_language_info(
+                        self.get(r['url'])
+                    )
+                }
             } for r in results
         ]
 
@@ -75,3 +78,26 @@ class Crawler:
             percent = float(lang.split()[-1])  # %
             language_info[name] = percent
         return language_info
+
+    @classmethod
+    def oneshot(cls, keywords: List[str], _type: str = "", proxies: List[str] = None) -> List[Dict]:
+        """Used for one-shot searches (initializes the crawler for a single use and returns the result).
+            Used by main."""
+        c = cls(proxies)
+        return c.search_extra(keywords, _type)
+
+    @classmethod
+    def main(cls):
+        """Gets the parameters from standard input as json, and standard outputs extra search results as json."""
+        lines = [input()]
+        while '}' not in lines[-1]:
+            lines.append(input())
+        s = '\n'.join(lines).replace('"type"', '"_type"')  # Replace type to prevent collision with built in keyword
+        print(json.dumps(
+            cls.oneshot(**json.loads(s)),
+            indent=4
+        ))
+
+
+if __name__ == "__main__":
+    Crawler.main()

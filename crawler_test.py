@@ -1,7 +1,7 @@
 import pytest
 from mock import Mock
 
-from src import Crawler
+from crawler import Crawler
 
 
 @pytest.fixture()
@@ -41,7 +41,7 @@ def test_search_bad_type(crawler):
 
 
 @pytest.mark.parametrize("proxy", ['1.1.1.1:1111', None])
-def test_proxy_on(mocker, proxy):
+def test_proxy(mocker, proxy):
     """Check that the proxy parameter is passed properly to requests (with and without proxy)."""
     get = mocker.patch("requests.get", return_value=Mock(text="Foo"))
     crawler = Crawler(proxies=[proxy] if proxy else None)
@@ -95,14 +95,14 @@ def test_extract_links(crawler, test_description, text, links):
 
 
 def test_search(crawler, mocker):
-    mocker.patch("src.crawler.Crawler.get", return_value=LINKS_SOURCE)
+    mocker.patch("crawler.Crawler.get", return_value=LINKS_SOURCE)
     results = crawler.search(["Hello", "world!"])
     assert results == [{"url": url} for url in LINKS]
 
 
 def test_search_extra(crawler, mocker):
     # Mock http get (multiple calls: Search page, first repo page, second repo page).
-    mocker.patch("src.crawler.Crawler.get", side_effect=[
+    mocker.patch("crawler.Crawler.get", side_effect=[
         LINKS_SOURCE,
         """<span class="language-color" aria-label="PHP 57.3%" itemprop="keywords">PHP</span>
       <span class="language-color" aria-label="Nginx 34.9%" itemprop="keywords">Nginx</span>
@@ -113,22 +113,26 @@ def test_search_extra(crawler, mocker):
     assert results == [
         {
             "url": "https://github.com/docker/dockercloud-hello-world",
-            "owner": "docker",
-            "language_stats": {
-                "PHP": 57.3, "Nginx": 34.9, "Shell": 7.8
+            "extra": {
+                "owner": "docker",
+                "language_stats": {
+                    "PHP": 57.3, "Nginx": 34.9, "Shell": 7.8
+                }
             }
         },
         {
             "url": "https://github.com/knightking100/hello-worlds",
-            "owner": "knightking100",
-            "language_stats": {}  # Repository without language stats
+            "extra": {
+                "owner": "knightking100",
+                "language_stats": {}  # Repository without language stats
+            }
         }
     ]
 
 
 def test_search_extra_issue(crawler, mocker):
     """Test search extra with someting other than a Repository (Should just return URL)."""
-    mocker.patch("src.crawler.Crawler.get", return_value="""
+    mocker.patch("crawler.Crawler.get", return_value="""
     <a title="foo" data-hydro-click="{&quot;eventt;search_result.click&quot;,&quot;payload&quot;:
     :&quot;MDExOlB1bGxSZXF1ZXN0MjA0MzQ3NjM5&quot;,&quot;model_name&quot;:&quot;Issue
     &quot;,&quot;url&quot;:&quot;https://github.com/nathanleiby/rc2/pull/1&quot;},&quot;""")
@@ -142,3 +146,22 @@ def test_extract_language_info(crawler):
         background-color:#e4cc98;" itemprop="keywords">Tcl</span>"""
     language_info = crawler.extract_language_info(source)
     assert {"Python": 95.9, "Tcl": 4.1} == language_info
+
+
+def test_main(mocker):
+    """Test program CLI mocking stdin&stdout"""
+    mocker.patch("builtins.input", return_value="""
+    {
+      "keywords": [
+        "ahsldkjhfalksjhflashf"
+      ],
+      "proxies": [
+        "194.126.37.94:8080"
+      ],
+      "type": "Repositories"
+    }
+    """)
+    mocker.patch("crawler.Crawler.get", return_value="")
+    out = mocker.patch("builtins.print")
+    Crawler.main()
+    out.assert_called_once_with("[]")

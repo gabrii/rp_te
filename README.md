@@ -5,7 +5,12 @@ is not commited, to preserve the validity of their future evaluations)._
 
 [![Build Status](https://travis-ci.org/gabrii/rp_te.svg?branch=master)](https://travis-ci.org/gabrii/rp_te)
 [![codecov](https://codecov.io/gh/gabrii/rp_te/branch/master/graph/badge.svg)](https://codecov.io/gh/gabrii/rp_te)
+[![pylint Score](https://mperlet.github.io/pybadge/badges/10.svg)](https://github.com/mperlet/pybadge)
 
+All the scraping is done with 2 regular expressions, which requires much less memory and cpu time than creating an HTML tree.  
+
+The multiple GETs needed to extract language stats from each repo are done sequentially, as I find parallelization to be
+out of scope for this task. In real life I would have probably implemented it with AsyncIO.
 
 ## Installation
 
@@ -57,7 +62,7 @@ $ cat input.json | python crawler.py > output.json
 
 ```
 
-Alternatively, you can use the module directly:
+Or, you can use the module directly from python:
 ```python
 from crawler import Crawler
 

@@ -13,7 +13,7 @@ mock==2.0.0
 more-itertools==4.2.0
 pbr==4.2.0
 pluggy==0.7.1
-py==1.5.4
+py==1.10.0
 pylint==2.0.1
 pytest==3.6.4
 pytest-cov==2.5.1
